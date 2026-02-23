@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Summarizer - Dialogue Summarization</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📝 Dialogue Summarizer</h1>
+            <p class="subtitle">Powered by BART-large-CNN fine-tuned on SAMSum dataset</p>
+        </header>
+
+        <main>
+            <div class="card">
+                <div class="input-section">
+                    <label for="dialogue-input">Enter Dialogue</label>
+                    <textarea
+                        id="dialogue-input"
+                        placeholder="Amanda: Hey, are we meeting today?&#10;Jerry: Sure! What time works for you?&#10;Amanda: How about 3pm at the coffee shop?&#10;Jerry: Perfect, see you there!&#10;Amanda: Great, I'll bring the reports."
+                        rows="8"
+                    ></textarea>
+                    <div class="char-count">
+                        <span id="char-count">0</span> characters
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button id="summarize-btn" onclick="summarize()">
+                        <span class="btn-icon">⚡</span> Summarize
+                    </button>
+                    <button id="clear-btn" class="secondary" onclick="clearAll()">
+                        <span class="btn-icon">🗑️</span> Clear
+                    </button>
+                    <button id="example-btn" class="secondary" onclick="loadExample()">
+                        <span class="btn-icon">📋</span> Load Example
+                    </button>
+                </div>
+
+                <div id="loading" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <span>Generating summary...</span>
+                </div>
+
+                <div id="result" class="result-section" style="display: none;">
+                    <label>Generated Summary</label>
+                    <div id="summary-output" class="summary-box"></div>
+                    <div class="meta-info">
+                        <span id="input-len"></span>
+                        <span id="output-len"></span>
+                        <span id="compression"></span>
+                    </div>
+                </div>
+
+                <div id="error" class="error-box" style="display: none;"></div>
+            </div>
+
+            <div class="info-card">
+                <h3>About This Model</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong>Model</strong>
+                        <span>BART-large-CNN</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Dataset</strong>
+                        <span>SAMSum (16k dialogues)</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Task</strong>
+                        <span>Dialogue Summarization</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>API Docs</strong>
+                        <span><a href="/docs" target="_blank">OpenAPI Swagger</a></span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Built with FastAPI + HuggingFace Transformers | <a href="/docs">API Documentation</a></p>
+        </footer>
+    </div>
+
+    <script>
+        const dialogueInput = document.getElementById('dialogue-input');
+        const charCount = document.getElementById('char-count');
+
+        dialogueInput.addEventListener('input', () => {
+            charCount.textContent = dialogueInput.value.length;
+        });
+
+        const EXAMPLES = [
+            "Amanda: Hey, are we meeting today?\nJerry: Sure! What time works for you?\nAmanda: How about 3pm at the coffee shop?\nJerry: Perfect, see you there!\nAmanda: Great, I'll bring the project reports.\nJerry: Awesome, I'll review them beforehand.",
+            "Hannah: Hey, do you have Betty's number?\nAmanda: Lemme check\nHannah: Okay\nAmanda: Sorry, can't find it.\nHannah: Oh, that's fine. I'll ask her tomorrow at work.\nAmanda: Sure! Tell her I said hi.",
+            "Eric: Have you finished the report?\nRob: Almost, I need to add the financial section.\nEric: When will it be ready?\nRob: By end of day today.\nEric: Perfect, the client meeting is tomorrow at 10am.\nRob: I know, I'll email it to you tonight for review.\nEric: Thanks! Make sure the charts are updated too.\nRob: Will do."
+        ];
+
+        let exampleIndex = 0;
+
+        function loadExample() {
+            dialogueInput.value = EXAMPLES[exampleIndex % EXAMPLES.length];
+            charCount.textContent = dialogueInput.value.length;
+            exampleIndex++;
+        }
+
+        function clearAll() {
+            dialogueInput.value = '';
+            charCount.textContent = '0';
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+        }
+
+        async function summarize() {
+            const text = dialogueInput.value.trim();
+            if (!text || text.length < 10) {
+                showError('Please enter at least 10 characters of dialogue.');
+                return;
+            }
+
+            const btn = document.getElementById('summarize-btn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const error = document.getElementById('error');
+
+            btn.disabled = true;
+            loading.style.display = 'flex';
+            result.style.display = 'none';
+            error.style.display = 'none';
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.detail || 'Prediction failed');
+                }
+
+                const data = await response.json();
+
+                document.getElementById('summary-output').textContent = data.summary;
+                document.getElementById('input-len').textContent = `Input: ${data.input_length} chars`;
+                document.getElementById('output-len').textContent = `Summary: ${data.summary_length} chars`;
+
+                const ratio = ((1 - data.summary_length / data.input_length) * 100).toFixed(1);
+                document.getElementById('compression').textContent = `Compression: ${ratio}%`;
+
+                result.style.display = 'block';
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                btn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        function showError(message) {
+            const error = document.getElementById('error');
+            error.textContent = message;
+            error.style.display = 'block';
+        }
+
+        // Allow Ctrl+Enter to submit
+        dialogueInput.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                summarize();
+            }
+        });
+    </script>
+</body>
+</html>

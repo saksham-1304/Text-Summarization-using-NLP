@@ -1,0 +1,73 @@
+artifacts_root: artifacts
+
+
+# ============================================================
+# Stage 1: Data Ingestion
+# Downloads SAMSum dataset from HuggingFace Hub
+# SAMSum: 16k messenger-like conversations with summaries
+# Paper: https://arxiv.org/abs/1911.12237
+# ============================================================
+data_ingestion:
+  root_dir: artifacts/data_ingestion
+  dataset_name: samsum
+  local_data_dir: artifacts/data_ingestion/samsum_dataset
+
+
+# ============================================================
+# Stage 2: Data Validation
+# Validates dataset schema, splits, and data quality
+# ============================================================
+data_validation:
+  root_dir: artifacts/data_validation
+  status_file: artifacts/data_validation/status.txt
+  local_data_dir: artifacts/data_ingestion/samsum_dataset
+  required_splits:
+    - train
+    - test
+    - validation
+  required_columns:
+    train:
+      - id
+      - dialogue
+      - summary
+    test:
+      - id
+      - dialogue
+      - summary
+    validation:
+      - id
+      - dialogue
+      - summary
+
+
+# ============================================================
+# Stage 3: Data Transformation
+# Tokenizes dataset using BART tokenizer
+# ============================================================
+data_transformation:
+  root_dir: artifacts/data_transformation
+  data_path: artifacts/data_ingestion/samsum_dataset
+  tokenizer_name: facebook/bart-large-cnn
+
+
+# ============================================================
+# Stage 4: Model Training
+# Fine-tunes BART-large-CNN on SAMSum dataset
+# ============================================================
+model_trainer:
+  root_dir: artifacts/model_trainer
+  data_path: artifacts/data_transformation/samsum_dataset
+  model_ckpt: facebook/bart-large-cnn
+
+
+# ============================================================
+# Stage 5: Model Evaluation
+# Evaluates using ROUGE metrics on test split
+# ============================================================
+model_evaluation:
+  root_dir: artifacts/model_evaluation
+  data_path: artifacts/data_transformation/samsum_dataset
+  model_path: artifacts/model_trainer/bart-samsum-model
+  tokenizer_path: artifacts/model_trainer/tokenizer
+  metric_file_name: artifacts/model_evaluation/metrics.csv
+
