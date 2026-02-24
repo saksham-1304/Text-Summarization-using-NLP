@@ -242,6 +242,8 @@ Client          FastAPI           PredictionPipeline       BART Model
    │◄── JSON ───────│                      │                    │
 ```
 
+*Note: The `PredictionPipeline` uses `AutoModelForSeq2SeqLM` with `device_map="auto"`, `torch.float16`, and `offload_folder` to support inference on low-RAM machines. It uses greedy decoding (`num_beams=1`) with `no_repeat_ngram_size=5` to prevent hallucinations.*
+
 ## 4. Design Patterns Used
 
 | Pattern | Where | Why |

@@ -3,17 +3,17 @@
    ============================================================ */
 
 :root {
-    --primary: #6366f1;
-    --primary-hover: #4f46e5;
-    --bg: #0f172a;
-    --surface: #1e293b;
-    --surface-hover: #334155;
-    --text: #f1f5f9;
-    --text-muted: #94a3b8;
-    --border: #334155;
-    --success: #22c55e;
-    --error: #ef4444;
-    --radius: 12px;
+    --primary: #f97316;
+    --primary-hover: #ea580c;
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface-hover: #1f1f1f;
+    --text: #fafafa;
+    --text-muted: #8c8c8c;
+    --border: #2a2a2a;
+    --success: #4ade80;
+    --error: #f87171;
+    --radius: 10px;
 }
 
 * {
@@ -46,7 +46,7 @@ header h1 {
     font-size: 2.2rem;
     font-weight: 700;
     margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, var(--primary), #a78bfa);
+    background: linear-gradient(90deg, var(--primary), #fbbf24);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -97,7 +97,7 @@ textarea {
 textarea:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.18);
 }
 
 textarea::placeholder {

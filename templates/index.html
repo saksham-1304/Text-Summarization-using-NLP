@@ -27,6 +27,8 @@
                     </div>
                 </div>
 
+                <!-- Max length slider removed -->
+
                 <div class="button-group">
                     <button id="summarize-btn" onclick="summarize()">
                         <span class="btn-icon">⚡</span> Summarize
@@ -120,7 +122,6 @@
                 showError('Please enter at least 10 characters of dialogue.');
                 return;
             }
-
             const btn = document.getElementById('summarize-btn');
             const loading = document.getElementById('loading');
             const result = document.getElementById('result');

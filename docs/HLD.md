@@ -26,8 +26,8 @@ A production-grade **dialogue summarization system** that fine-tunes `facebook/b
 │  │  ┌─────────────────────────────────────────┐  │                │
 │  │  │  PredictionPipeline                     │  │                │
 │  │  │  - BART-large-CNN (fine-tuned)          │  │                │
-│  │  │  - Beam Search (num_beams=8)            │  │                │
-│  │  │  - Length Penalty (0.8)                 │  │                │
+│  │  - Greedy Decoding (num_beams=1)        │  │                │
+│  │  - FP16 + Accelerate Offloading         │  │                │
 │  │  └─────────────────────────────────────────┘  │                │
 │  └───────────────────────────────────────────────┘                │
 └─────────────────────────────────────────────────────────────────┘
@@ -86,7 +86,7 @@ FastAPI /predict endpoint
 PredictionPipeline.predict()
     │
     ├── Tokenize input (BART tokenizer)
-    ├── Generate summary (beam search)
+    ├── Generate summary (greedy decoding, no_repeat_ngram_size=5)
     └── Decode tokens to text
     │
     ▼

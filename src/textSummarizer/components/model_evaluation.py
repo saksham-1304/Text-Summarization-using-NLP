@@ -91,7 +91,8 @@ class ModelEvaluation:
                 input_ids=inputs["input_ids"].to(device),
                 attention_mask=inputs["attention_mask"].to(device),
                 length_penalty=0.8,
-                num_beams=8,
+                num_beams=1,
+                no_repeat_ngram_size=5,
                 max_length=self.config.max_target_length,
             )
 

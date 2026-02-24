@@ -101,7 +101,15 @@ POST /predict/batch             → Batch summarization (up to 10)
 GET  /train                     → Trigger training pipeline
 ```
 
-### 5.2 API Contract
+### 5.2 Inference Optimization
+
+To support inference on machines with limited RAM (e.g., < 2GB free RAM for a 1.55GB model), the prediction pipeline implements several optimizations:
+- **Accelerate Device Map**: Uses `device_map="auto"` to automatically distribute model weights across available devices (GPU/CPU/Disk).
+- **Disk Offloading**: Uses `offload_folder` to swap weights to disk when RAM is insufficient.
+- **FP16 Precision**: Loads the model in `torch.float16` to halve the memory footprint.
+- **Greedy Decoding**: Uses `num_beams=1` with `no_repeat_ngram_size=5` to prevent hallucinations and repetitive loops while keeping memory usage low.
+
+### 5.3 API Contract
 
 **POST /predict**
 ```json

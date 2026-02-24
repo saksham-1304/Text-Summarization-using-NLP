@@ -252,10 +252,20 @@ curl -X POST "http://localhost:8080/predict" \
 
 Open `http://localhost:8080` in your browser for the interactive web interface:
 
-- Modern dark theme
+- Modern charcoal and orange theme
 - Example dialogue loading
 - Character count and compression ratio
 - Keyboard shortcut: `Ctrl+Enter` to submit
+
+---
+
+## Inference Optimizations
+
+To support running the 1.55GB BART-large-CNN model on machines with limited RAM (e.g., < 2GB free), the inference pipeline (`PredictionPipeline`) implements:
+- **Accelerate Device Map**: `device_map="auto"` automatically distributes weights across GPU/CPU/Disk.
+- **Disk Offloading**: `offload_folder` swaps weights to disk when RAM is full.
+- **FP16 Precision**: `torch.float16` halves the memory footprint.
+- **Greedy Decoding**: `num_beams=1` and `no_repeat_ngram_size=5` prevent hallucinations while keeping memory usage low.
 
 ---
 
