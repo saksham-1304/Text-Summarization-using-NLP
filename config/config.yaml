@@ -9,7 +9,7 @@ artifacts_root: artifacts
 # ============================================================
 data_ingestion:
   root_dir: artifacts/data_ingestion
-  dataset_name: samsum
+  dataset_name: knkarthick/samsum
   local_data_dir: artifacts/data_ingestion/samsum_dataset
 
 

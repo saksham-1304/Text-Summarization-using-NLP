@@ -49,7 +49,7 @@ STAGES = {
 }
 
 
-def run_stage(stage_num: int) -> None:
+def run_stage(stage_num: int, smoke_train: bool = False) -> None:
     """Execute a single pipeline stage.
 
     Args:
@@ -62,7 +62,10 @@ def run_stage(stage_num: int) -> None:
 
     start_time = time.time()
 
-    pipeline = pipeline_class()
+    if stage_num == 4:
+        pipeline = pipeline_class(smoke_train=smoke_train)
+    else:
+        pipeline = pipeline_class()
     pipeline.main()
 
     elapsed = time.time() - start_time
@@ -70,7 +73,7 @@ def run_stage(stage_num: int) -> None:
     logger.info("")
 
 
-def main(start_stage: int = 1, end_stage: int = 5) -> None:
+def main(start_stage: int = 1, end_stage: int = 5, smoke_train: bool = False) -> None:
     """Run the training pipeline from start_stage to end_stage.
 
     Args:
@@ -80,13 +83,15 @@ def main(start_stage: int = 1, end_stage: int = 5) -> None:
     logger.info(f"Text Summarization Training Pipeline")
     logger.info(f"Running stages {start_stage} through {end_stage}")
     logger.info(f"Model: facebook/bart-large-cnn | Dataset: SAMSum")
+    if smoke_train:
+        logger.info("Smoke training mode: enabled")
     logger.info("")
 
     total_start = time.time()
 
     for stage_num in range(start_stage, end_stage + 1):
         try:
-            run_stage(stage_num)
+            run_stage(stage_num, smoke_train=smoke_train)
         except Exception as e:
             logger.exception(
                 f"Stage {stage_num} failed with error: {e}"
@@ -117,13 +122,21 @@ if __name__ == "__main__":
         choices=[1, 2, 3, 4, 5],
         help="Ending stage number (default: 5)",
     )
+    parser.add_argument(
+        "--smoke-train",
+        action="store_true",
+        help=(
+            "Run stage 4 in fast smoke mode (tiny subset, few steps) "
+            "to validate training pipeline locally"
+        ),
+    )
     args = parser.parse_args()
 
     if args.stage > args.to:
         print(f"Error: --stage ({args.stage}) must be <= --to ({args.to})")
         sys.exit(1)
 
-    main(start_stage=args.stage, end_stage=args.to)
+    main(start_stage=args.stage, end_stage=args.to, smoke_train=args.smoke_train)
 
 
 

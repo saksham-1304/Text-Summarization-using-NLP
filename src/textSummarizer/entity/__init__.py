@@ -37,6 +37,9 @@ class DataTransformationConfig:
     max_target_length: int
     text_column: str
     summary_column: str
+    enable_augmentation: bool
+    augmentation_probability: float
+    enable_text_normalization: bool
 
 
 @dataclass(frozen=True)
@@ -60,6 +63,21 @@ class ModelTrainerConfig:
     save_total_limit: int
     load_best_model_at_end: bool
     report_to: str
+    seed: int
+    max_grad_norm: float
+    label_smoothing_factor: float
+    lr_scheduler_type: str
+    early_stopping_patience: int
+    early_stopping_threshold: float
+    group_by_length: bool
+    dataloader_num_workers: int
+    max_input_length: int
+    max_target_length: int
+    text_column: str
+    summary_column: str
+    smoke_max_steps: int
+    smoke_train_samples: int
+    smoke_eval_samples: int
 
 
 @dataclass(frozen=True)
@@ -75,3 +93,12 @@ class ModelEvaluationConfig:
     max_target_length: int
     text_column: str
     summary_column: str
+    default_num_beams: int
+    default_length_penalty: float
+    default_no_repeat_ngram_size: int
+    enable_decoding_sweep: bool
+    decoding_sweep_max_samples: int
+    decoding_selection_metric: str
+    decoding_num_beams: List[int]
+    decoding_length_penalties: List[float]
+    decoding_no_repeat_ngram_sizes: List[int]

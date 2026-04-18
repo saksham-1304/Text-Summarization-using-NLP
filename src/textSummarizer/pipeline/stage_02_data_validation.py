@@ -14,9 +14,6 @@ STAGE_NAME = "Data Validation"
 class DataValidationTrainingPipeline:
     """Orchestrates the data validation stage."""
 
-    def __init__(self) -> None:
-        pass
-
     def main(self) -> bool:
         """Execute data validation pipeline.
 
@@ -24,17 +21,21 @@ class DataValidationTrainingPipeline:
             True if validation passes, False otherwise.
 
         Raises:
-            RuntimeError: If validation fails.
+            RuntimeError: If validation fails (BEFORE any side effects).
         """
         config = ConfigurationManager()
         data_validation_config = config.get_data_validation_config()
         data_validation = DataValidation(config=data_validation_config)
+        
+        # Check validity FIRST (before any side effects like file writes)
         is_valid = data_validation.validate_all_files_exist()
 
+        # ONLY after validation succeeds, continue
         if not is_valid:
             raise RuntimeError(
-                "Data validation failed. Check the status file for details: "
+                "❌ Data validation failed. Check status file for details: "
                 f"{data_validation_config.status_file}"
             )
 
+        logger.info("✓ Data validation passed")
         return is_valid

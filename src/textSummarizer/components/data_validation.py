@@ -1,36 +1,97 @@
 """Stage 2: Data Validation Component.
 
-Validates the downloaded dataset for:
-  - Required splits (train, test, validation) exist
-  - Required columns present in each split
-  - No empty splits
-  - No null/empty values in critical fields
-  - Data type correctness
+Validates the downloaded dataset for integrity and schema correctness.
 
-Writes a detailed validation report to disk.
+Validation Checks:
+  1. Required splits (train, validation, test) exist
+  2. Required columns present in each split
+  3. No empty splits  
+  4. No null/empty values in dialogue/summary columns
+  5. Data type correctness
+  6. Statistical sanity checks
+
+Writes a detailed JSON validation report to disk for audit trail.
 """
 
 import json
 from pathlib import Path
-from datasets import load_from_disk
+from typing import Dict, Any
+
+try:
+    from datasets import load_from_disk
+except ImportError:
+    load_from_disk = None  # type: ignore[assignment]
+
 from textSummarizer.logging import logger
 from textSummarizer.entity import DataValidationConfig
 
 
 class DataValidation:
-    """Validates dataset integrity and schema correctness."""
+    """Validates dataset integrity, schema, and data quality.
+    
+    This component implements comprehensive validation checks on the SAMSum
+    dataset before it proceeds to tokenization and training.
+    
+    Validation failure at any step is reported to status_file for audit.
+    
+    Attributes:
+        config (DataValidationConfig): Configuration with paths and validation rules.
+    """
 
     def __init__(self, config: DataValidationConfig) -> None:
+        """Initialize data validation component.
+        
+        Args:
+            config: Frozen dataclass with validation settings and paths.
+        
+        Raises:
+            ValueError: If config is invalid.
+        """
+        if not config:
+            raise ValueError("config cannot be None")
         self.config = config
 
     def validate_all_files_exist(self) -> bool:
-        """Run all validation checks and write status report.
+        """Run all validation checks and write status report to disk.
 
+        Performs 5 sequential validation checks:
+          1. Dataset directory exists and is readable
+          2. Required splits (train/val/test) are present
+          3. Required columns (dialogue, summary) are in each split
+          4. No splits are empty
+          5. No null/empty values in key columns
+          6. Dataset statistics (avg lengths) are reasonable
+        
+        All results are persisted to self.config.status_file for audit trail.
+        
         Returns:
-            True if all validations pass, False otherwise.
+            True if all validations pass, False if any check fails.
+        
+        Raises:
+            RuntimeError: Only on unrecoverable errors (not file structure issues).
+        
+        Side Effects:
+            Writes JSON validation report to self.config.status_file.
+            Logs detailed validation results to logger.
         """
-        validation_results = {}
+        validation_results: Dict[str, Any] = {}
         overall_status = True
+
+        if load_from_disk is None:
+            logger.error(
+                "Missing optional dependency 'datasets'. Install with: "
+                "pip install datasets>=2.16.0"
+            )
+            self._write_status(
+                False,
+                {
+                    "error": (
+                        "Missing dependency 'datasets'. "
+                        "Install with: pip install datasets>=2.16.0"
+                    )
+                },
+            )
+            return False
 
         try:
             # Load dataset from disk
@@ -123,14 +184,27 @@ class DataValidation:
         self._write_status(overall_status, validation_results)
         return overall_status
 
-    def _write_status(self, status: bool, details: dict) -> None:
-        """Write validation status and details to file."""
+    def _write_status(self, status: bool, details: Dict[str, Any]) -> None:
+        """Write validation status and details to JSON report file.
+        
+        Args:
+            status: Overall validation result (True = pass, False = fail).
+            details: Dictionary with detailed validation check results.
+        
+        Side Effects:
+            Creates parent directory if needed.
+            Writes JSON file with validation report.
+        """
         report = {
             "validation_status": status,
             "details": details,
         }
         status_file = Path(self.config.status_file)
         status_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(status_file, "w") as f:
-            f.write(json.dumps(report, indent=2))
-        logger.info(f"Validation status: {status} -> {status_file}")
+        try:
+            with open(status_file, "w") as f:
+                json.dump(report, f, indent=2)
+            logger.info(f"✓ Validation report written to {status_file}")
+        except Exception as e:
+            logger.error(f"Failed to write validation report: {e}")
+            raise

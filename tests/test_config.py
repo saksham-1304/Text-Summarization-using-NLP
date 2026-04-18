@@ -31,7 +31,7 @@ class TestConfigurationManager:
     def test_data_ingestion_config(self, config_manager):
         config = config_manager.get_data_ingestion_config()
         assert isinstance(config, DataIngestionConfig)
-        assert config.dataset_name == "samsum"
+        assert config.dataset_name == "knkarthick/samsum"
         assert "data_ingestion" in str(config.root_dir)
 
     def test_data_validation_config(self, config_manager):
@@ -48,6 +48,9 @@ class TestConfigurationManager:
         assert config.tokenizer_name == "facebook/bart-large-cnn"
         assert config.max_input_length == 1024
         assert config.max_target_length == 128
+        assert config.enable_augmentation is True
+        assert config.augmentation_probability == 0.25
+        assert config.enable_text_normalization is True
 
     def test_model_trainer_config(self, config_manager):
         config = config_manager.get_model_trainer_config()
@@ -56,6 +59,15 @@ class TestConfigurationManager:
         assert config.num_train_epochs == 3
         assert config.learning_rate == 2e-5
         assert config.fp16 is True
+        assert config.seed == 42
+        assert config.max_grad_norm == 1.0
+        assert config.label_smoothing_factor == 0.1
+        assert config.lr_scheduler_type == "linear"
+        assert config.early_stopping_patience == 3
+        assert config.group_by_length is True
+        assert config.smoke_max_steps == 5
+        assert config.smoke_train_samples == 16
+        assert config.smoke_eval_samples == 8
 
     def test_model_evaluation_config(self, config_manager):
         config = config_manager.get_model_evaluation_config()
@@ -63,3 +75,7 @@ class TestConfigurationManager:
         assert config.batch_size == 8
         assert config.text_column == "dialogue"
         assert config.summary_column == "summary"
+        assert config.default_num_beams == 1
+        assert config.default_length_penalty == 0.8
+        assert config.default_no_repeat_ngram_size == 5
+        assert config.enable_decoding_sweep is True

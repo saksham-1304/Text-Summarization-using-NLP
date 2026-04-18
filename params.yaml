@@ -18,6 +18,17 @@ TrainingArguments:
   save_total_limit: 3
   load_best_model_at_end: true
   report_to: none
+  seed: 42
+  max_grad_norm: 1.0
+  label_smoothing_factor: 0.1
+  lr_scheduler_type: linear
+  early_stopping_patience: 3
+  early_stopping_threshold: 0.0
+  group_by_length: true
+  dataloader_num_workers: 2
+  smoke_max_steps: 5
+  smoke_train_samples: 16
+  smoke_eval_samples: 8
 
 
 # ============================================================
@@ -28,6 +39,9 @@ DataTransformation:
   max_target_length: 128
   text_column: dialogue
   summary_column: summary
+  enable_augmentation: true
+  augmentation_probability: 0.25
+  enable_text_normalization: true
 
 
 # ============================================================
@@ -39,4 +53,13 @@ ModelEvaluation:
   max_target_length: 128
   text_column: dialogue
   summary_column: summary
+  default_num_beams: 1
+  default_length_penalty: 0.8
+  default_no_repeat_ngram_size: 5
+  enable_decoding_sweep: true
+  decoding_sweep_max_samples: 200
+  decoding_selection_metric: rougeLsum
+  decoding_num_beams: [2, 4, 6]
+  decoding_length_penalties: [0.8, 1.0, 1.2]
+  decoding_no_repeat_ngram_sizes: [3, 4, 5]
 

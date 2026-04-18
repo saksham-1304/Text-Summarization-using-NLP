@@ -5,7 +5,6 @@ Evaluates the trained model using ROUGE metrics.
 
 from textSummarizer.config.configuration import ConfigurationManager
 from textSummarizer.components.model_evaluation import ModelEvaluation
-from textSummarizer.logging import logger
 
 
 STAGE_NAME = "Model Evaluation"
@@ -13,9 +12,6 @@ STAGE_NAME = "Model Evaluation"
 
 class ModelEvaluationTrainingPipeline:
     """Orchestrates the model evaluation stage."""
-
-    def __init__(self) -> None:
-        pass
 
     def main(self) -> dict:
         """Execute model evaluation pipeline.

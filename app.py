@@ -19,7 +19,7 @@ import os
 import subprocess
 import sys
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException, Request
@@ -46,6 +46,12 @@ class SummarizeRequest(BaseModel):
             "example": "Amanda: Hey, are we meeting today?\nJerry: Sure! What time?\nAmanda: How about 3pm at the coffee shop?\nJerry: Sounds good, see you there!"
         },
     )
+    max_length: Optional[int] = Field(
+        default=None,
+        ge=16,
+        le=512,
+        description="Optional max number of generated tokens (16-512)",
+    )
 
 
 class SummarizeResponse(BaseModel):
@@ -64,6 +70,12 @@ class BatchSummarizeRequest(BaseModel):
         min_length=1,
         max_length=10,
         description="List of texts to summarize (max 10)",
+    )
+    max_length: Optional[int] = Field(
+        default=None,
+        ge=16,
+        le=512,
+        description="Optional max number of generated tokens (16-512)",
     )
 
 
@@ -97,15 +109,40 @@ prediction_pipeline = None
 async def lifespan(app: FastAPI):
     """Load model on startup, cleanup on shutdown."""
     global prediction_pipeline
-    try:
-        from textSummarizer.pipeline.prediction import PredictionPipeline
-        prediction_pipeline = PredictionPipeline()
-        logger.info("Model loaded successfully at startup")
-    except Exception as e:
-        logger.warning(f"Model not loaded at startup: {e}")
-        logger.warning("Train the model first using /train or `python main.py`")
+    skip_model_load = os.getenv("TEXTSUMMARIZER_SKIP_MODEL_LOAD", "0").strip() == "1"
+
+    if skip_model_load:
+        logger.info("Skipping model load due to TEXTSUMMARIZER_SKIP_MODEL_LOAD=1")
+    else:
+        try:
+            from textSummarizer.pipeline.prediction import PredictionPipeline
+
+            prediction_pipeline = PredictionPipeline()
+            logger.info("✓ Model loaded successfully at startup")
+        except FileNotFoundError:
+            logger.info(
+                "⚠ Model not found. Train first: python main.py or POST /train"
+            )
+        except (RuntimeError, ValueError, TypeError) as e:
+            logger.error(f"❌ FATAL: Model load failed: {e}", exc_info=True)
+            logger.error("Model may be corrupted. Try retraining: python main.py")
+        except Exception as e:
+            logger.error(
+                f"❌ FATAL: Unexpected startup error: {e}",
+                exc_info=True,
+            )
+    
     yield
-    logger.info("Application shutting down")
+    
+    # Cleanup on shutdown
+    if prediction_pipeline is not None:
+        try:
+            prediction_pipeline.cleanup()
+            logger.info("✓ Model cleanup completed")
+        except Exception as e:
+            logger.warning(f"Cleanup error: {e}")
+    
+    logger.info("✓ Application shutdown complete")
 
 
 # ============================================================
@@ -152,7 +189,7 @@ async def health_check():
     return HealthResponse(
         status="healthy",
         model_loaded=prediction_pipeline is not None,
-        timestamp=datetime.utcnow().isoformat(),
+        timestamp=datetime.now(timezone.utc).isoformat(),
     )
 
 
@@ -160,7 +197,7 @@ async def health_check():
 async def model_info():
     """Get model and dataset information."""
     return {
-        "model": "facebook/bart-large-cnn",
+        "model": "bart-samsum-model (fine-tuned from facebook/bart-large-cnn)",
         "dataset": "SAMSum (16k dialogue-summary pairs)",
         "task": "Dialogue Summarization",
         "metrics": "ROUGE-1, ROUGE-2, ROUGE-L, ROUGE-Lsum",
@@ -174,7 +211,7 @@ async def predict(request: SummarizeRequest):
     """Generate a summary for a single input text.
 
     Args:
-        request: SummarizeRequest with the input text.
+        request: SummarizeRequest with input text and optional max length.
 
     Returns:
         SummarizeResponse with the generated summary.
@@ -186,13 +223,16 @@ async def predict(request: SummarizeRequest):
         )
 
     try:
-        summary = prediction_pipeline.predict(request.text)
+        summary = prediction_pipeline.predict(
+            request.text,
+            max_length=request.max_length,
+        )
         return SummarizeResponse(
             input_text=request.text,
             summary=summary,
             input_length=len(request.text),
             summary_length=len(summary),
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
         )
     except Exception as e:
         logger.exception(f"Prediction error: {e}")
@@ -216,8 +256,11 @@ async def predict_batch(request: BatchSummarizeRequest):
         )
 
     try:
-        summaries = prediction_pipeline.predict_batch(request.texts)
-        timestamp = datetime.utcnow().isoformat()
+        summaries = prediction_pipeline.predict_batch(
+            request.texts,
+            max_length=request.max_length,
+        )
+        timestamp = datetime.now(timezone.utc).isoformat()
 
         results = [
             SummarizeResponse(
@@ -240,26 +283,58 @@ async def predict_batch(request: BatchSummarizeRequest):
 async def training():
     """Trigger the full training pipeline (runs in subprocess).
 
-    Note: This is a long-running operation. For production, use
-    a task queue (Celery/Redis) instead.
+    Note: Long-running operation (30+ min). For production, use task queue (Celery).
+    
+    Returns:
+        TrainResponse with status and message.
+    
+    Raises:
+        HTTPException: If training subprocess fails or times out.
     """
     try:
-        logger.info("Training pipeline triggered via API")
-        process = subprocess.Popen(
+        logger.info("Training pipeline triggered via /train endpoint")
+        
+        # Run training with timeout and error capture
+        result = subprocess.run(
             [sys.executable, "main.py"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
+            timeout=3600,  # 1 hour timeout
+            check=False,  # Don't raise on non-zero exit
         )
+        
+        # Check return code
+        if result.returncode != 0:
+            stderr = result.stderr.decode(errors="replace")
+            logger.error(f"❌ Training failed (code={result.returncode})")
+            logger.error(f"stderr: {stderr[:500]}")  # Log first 500 chars
+            raise RuntimeError(f"Training subprocess failed: {stderr[:200]}")
+        
+        logger.info("✓ Training completed successfully")
         return TrainResponse(
-            status="started",
-            message=(
-                f"Training started (PID: {process.pid}). "
-                "Monitor progress in logs/running_logs.log"
-            ),
+            status="completed",
+            message="Training finished. Model ready for /predict.",
         )
+    
+    except subprocess.TimeoutExpired:
+        logger.error("❌ Training timeout (1 hour)")
+        raise HTTPException(
+            status_code=408,
+            detail="Training timeout (exceeded 1 hour)",
+        )
+    
+    except FileNotFoundError:
+        logger.error("❌ main.py not found in project root")
+        raise HTTPException(
+            status_code=500,
+            detail="main.py not found. Check project structure.",
+        )
+    
     except Exception as e:
-        logger.exception(f"Training trigger error: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to start training: {str(e)}")
+        logger.error(f"❌ Training trigger error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to run training: {str(e)[:100]}",
+        )
 
 
 if __name__ == "__main__":

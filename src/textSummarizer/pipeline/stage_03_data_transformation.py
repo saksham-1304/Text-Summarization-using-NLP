@@ -5,7 +5,6 @@ Tokenizes raw dataset into model-ready format.
 
 from textSummarizer.config.configuration import ConfigurationManager
 from textSummarizer.components.data_transformation import DataTransformation
-from textSummarizer.logging import logger
 
 
 STAGE_NAME = "Data Transformation"
@@ -13,9 +12,6 @@ STAGE_NAME = "Data Transformation"
 
 class DataTransformationTrainingPipeline:
     """Orchestrates the data transformation stage."""
-
-    def __init__(self) -> None:
-        pass
 
     def main(self) -> None:
         """Execute data transformation pipeline."""

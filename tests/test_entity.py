@@ -17,16 +17,16 @@ class TestDataIngestionConfig:
     def test_creation(self):
         config = DataIngestionConfig(
             root_dir=Path("artifacts/data_ingestion"),
-            dataset_name="samsum",
+            dataset_name="knkarthick/samsum",
             local_data_dir=Path("artifacts/data_ingestion/samsum_dataset"),
         )
-        assert config.dataset_name == "samsum"
+        assert config.dataset_name == "knkarthick/samsum"
         assert config.root_dir == Path("artifacts/data_ingestion")
 
     def test_frozen(self):
         config = DataIngestionConfig(
             root_dir=Path("test"),
-            dataset_name="samsum",
+            dataset_name="knkarthick/samsum",
             local_data_dir=Path("test/data"),
         )
         with pytest.raises(AttributeError):
@@ -60,9 +60,14 @@ class TestDataTransformationConfig:
             max_target_length=128,
             text_column="dialogue",
             summary_column="summary",
+            enable_augmentation=True,
+            augmentation_probability=0.25,
+            enable_text_normalization=True,
         )
         assert config.max_input_length == 1024
         assert config.tokenizer_name == "facebook/bart-large-cnn"
+        assert config.enable_augmentation is True
+        assert config.augmentation_probability == 0.25
 
 
 class TestModelTrainerConfig:
@@ -88,10 +93,27 @@ class TestModelTrainerConfig:
             save_total_limit=3,
             load_best_model_at_end=True,
             report_to="none",
+            seed=42,
+            max_grad_norm=1.0,
+            label_smoothing_factor=0.1,
+            lr_scheduler_type="linear",
+            early_stopping_patience=3,
+            early_stopping_threshold=0.0,
+            group_by_length=True,
+            dataloader_num_workers=2,
+            max_input_length=1024,
+            max_target_length=128,
+            text_column="dialogue",
+            summary_column="summary",
+            smoke_max_steps=5,
+            smoke_train_samples=64,
+            smoke_eval_samples=32,
         )
         assert config.num_train_epochs == 3
         assert config.fp16 is True
         assert config.learning_rate == 2e-5
+        assert config.label_smoothing_factor == 0.1
+        assert config.smoke_max_steps == 5
 
 
 class TestModelEvaluationConfig:
@@ -109,6 +131,16 @@ class TestModelEvaluationConfig:
             max_target_length=128,
             text_column="dialogue",
             summary_column="summary",
+            default_num_beams=1,
+            default_length_penalty=0.8,
+            default_no_repeat_ngram_size=5,
+            enable_decoding_sweep=True,
+            decoding_sweep_max_samples=200,
+            decoding_selection_metric="rougeLsum",
+            decoding_num_beams=[2, 4, 6],
+            decoding_length_penalties=[0.8, 1.0, 1.2],
+            decoding_no_repeat_ngram_sizes=[3, 4, 5],
         )
         assert config.batch_size == 8
         assert config.text_column == "dialogue"
+        assert config.enable_decoding_sweep is True

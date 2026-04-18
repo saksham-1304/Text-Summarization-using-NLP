@@ -5,7 +5,6 @@ Downloads SAMSum dataset from HuggingFace Hub.
 
 from textSummarizer.config.configuration import ConfigurationManager
 from textSummarizer.components.data_ingestion import DataIngestion
-from textSummarizer.logging import logger
 
 
 STAGE_NAME = "Data Ingestion"
@@ -13,9 +12,6 @@ STAGE_NAME = "Data Ingestion"
 
 class DataIngestionTrainingPipeline:
     """Orchestrates the data ingestion stage."""
-
-    def __init__(self) -> None:
-        pass
 
     def main(self) -> None:
         """Execute data ingestion pipeline."""

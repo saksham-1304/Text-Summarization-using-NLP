@@ -54,7 +54,7 @@ A production-grade **dialogue summarization system** that fine-tunes `facebook/b
 ### 3.1 Data Layer
 | Component | Description |
 |-----------|-------------|
-| **HuggingFace Hub** | Source for SAMSum dataset (samsum) |
+| **HuggingFace Hub** | Source for SAMSum dataset (`knkarthick/samsum`) |
 | **Local Artifact Store** | `artifacts/` directory for intermediate data |
 | **Arrow Format** | Dataset stored in Apache Arrow for fast I/O |
 
